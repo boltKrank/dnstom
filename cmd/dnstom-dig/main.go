@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/BoltKrank/dnstom/internal/dnswire"
-	"github.com/BoltKrank/dnstom/internal/resolver"
+	"dnstom/internal/dnswire"
+	"dnstom/internal/resolver"
 )
 
 func main() {

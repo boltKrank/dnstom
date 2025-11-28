@@ -3,7 +3,7 @@ package resolver
 import (
 	"errors"
 
-	"github.com/BoltKrank/dnstom/internal/dnswire"
+	"dnstom/internal/dnswire"
 )
 
 type Resolver struct {
