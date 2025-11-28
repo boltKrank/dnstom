@@ -1,72 +1,36 @@
-package dnswire
+package main
 
 import (
+	"flag"
 	"fmt"
-	"io"
+	"log"
+	"os"
+
+	"github.com/BoltKrank/dnstom/internal/dnswire"
+	"github.com/BoltKrank/dnstom/internal/resolver"
 )
 
-// Very minimal to start; you'll expand this as you go.
+func main() {
+	server := flag.String("server", "1.1.1.1:53", "DNS server to query (host:port)")
+	qtype := flag.String("type", "A", "Query type (A, AAAA, MX, NS, TXT, etc.)")
+	flag.Parse()
 
-type Header struct {
-	ID      uint16
-	QR      bool
-	Opcode  uint8
-	AA      bool
-	TC      bool
-	RD      bool
-	RA      bool
-	Z       uint8 // usually 0
-	Rcode   uint8
-	QDCount uint16
-	ANCount uint16
-	NSCount uint16
-	ARCount uint16
-}
+	if flag.NArg() < 1 {
+		fmt.Fprintf(os.Stderr, "usage: dnstom-dig [options] <name>\n")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
 
-type Question struct {
-	Name  string
-	Type  uint16
-	Class uint16
-}
+	name := flag.Arg(0)
 
-type ResourceRecord struct {
-	Name     string
-	Type     uint16
-	Class    uint16
-	TTL      uint32
-	RDLength uint16
-	RData    []byte // you'll later decode into typed RRs using internal/rr
-}
+	r := resolver.New(*server)
 
-type Message struct {
-	Header     Header
-	Questions  []Question
-	Answers    []ResourceRecord
-	Authority  []ResourceRecord
-	Additional []ResourceRecord
-}
-
-// PrettyPrint - I want to make it visual, and easy to understand, in a similar vein to WireShark.
-// Not to that extent, but ease of information access it key.
-func PrettyPrint(m *Message, w io.Writer) error {
-	_, err := fmt.Fprintf(w, ";; dnstom raw message\n;; ID: %d, QD: %d, AN: %d, NS: %d, AR: %d\n",
-		m.Header.ID, m.Header.QDCount, m.Header.ANCount, m.Header.NSCount, m.Header.ARCount)
+	msg, err := r.Lookup(name, *qtype)
 	if err != nil {
-		return err
+		log.Fatalf("lookup error: %v", err)
 	}
 
-	for _, q := range m.Questions {
-		if _, err := fmt.Fprintf(w, ";; QUESTION: %s type=%d class=%d\n", q.Name, q.Type, q.Class); err != nil {
-			return err
-		}
+	if err := dnswire.PrettyPrint(msg, os.Stdout); err != nil {
+		log.Fatalf("print error: %v", err)
 	}
-
-	for _, rr := range m.Answers {
-		if _, err := fmt.Fprintf(w, "ANSWER: %s TTL=%d type=%d class=%d\n",
-			rr.Name, rr.TTL, rr.Type, rr.Class); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
