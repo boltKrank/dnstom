@@ -1,18 +1,17 @@
 package main
 
 import (
-	"flag"
-	"fmt"
+	"flag" //CLI flags
+	"fmt"  // Strings
 	"log"
 	"os"
 
-	"dnstom/internal/dnswire"
 	"dnstom/internal/resolver"
 )
 
 func main() {
-	server := flag.String("server", "1.1.1.1:53", "DNS server to query (host:port)")
-	qtype := flag.String("type", "A", "Query type (A, AAAA, MX, NS, TXT, etc.)")
+	// We accept a --server flag for future use, even though step 1 ignores it.
+	server := flag.String("server", "system", "DNS server to query (ignored in step 1; uses system resolver)")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
@@ -25,12 +24,18 @@ func main() {
 
 	r := resolver.New(*server)
 
-	msg, err := r.Lookup(name, *qtype)
+	ips, err := r.LookupA(name)
 	if err != nil {
 		log.Fatalf("lookup error: %v", err)
 	}
 
-	if err := dnswire.PrettyPrint(msg, os.Stdout); err != nil {
-		log.Fatalf("print error: %v", err)
+	if len(ips) == 0 {
+		fmt.Printf("No IPv4 addresses found for %s\n", name)
+		return
+	}
+
+	fmt.Printf("A records for %s:\n", name)
+	for _, ip := range ips {
+		fmt.Printf("  %s\n", ip.String())
 	}
 }
