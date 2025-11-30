@@ -15,6 +15,13 @@ func New(server string) *Resolver {
 	return &Resolver{server: server}
 }
 
+// Called from main():
+//	r := resolver.New(*server) -> create this.
+
+//	ips, err := r.LookupA(name) -> lookup A Record.
+
+// Test data passed in name =  example.com
+
 // LookupA will eventually perform a real DNS query to r.server and return
 // IPv4 addresses (A records) for the given name.
 // Right now, EncodeQuery is called; UDP send/receive and response parsing

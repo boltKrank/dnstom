@@ -11,13 +11,19 @@ import (
 
 func main() {
 	// We accept a --server flag for future use, even though step 1 ignores it.
-	server := flag.String("server", "system", "DNS server to query (ignored in step 1; uses system resolver)")
+	server := flag.String("server", "system", "DNS server to query")
 	flag.Parse()
 
-	if flag.NArg() < 1 {
-		fmt.Fprintf(os.Stderr, "usage: dnstom-dig [options] <name>\n")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "dnstom-dig - a toy DNS resolver\n")
+		fmt.Fprintf(os.Stderr, "Usage: dnstom-dig [options] <name>\n\n")
+		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
-		os.Exit(1)
+	}
+
+	if flag.NArg() < 1 {
+		flag.Usage()
+		return
 	}
 
 	name := flag.Arg(0)
