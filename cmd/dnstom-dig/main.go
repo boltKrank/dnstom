@@ -4,12 +4,15 @@ import (
 	"flag" //CLI flags
 	"fmt"  // Strings
 	"log"
-	"os"
+	"os" // Seems like unless it's OS/2 it's probably covered :P
 
 	"dnstom/internal/resolver"
 )
 
 func main() {
+	// Print out RFC-style diagrams ?
+	diagram := flag.Bool("diagram", true, "Print RFC-Style diagrams for network packets")
+
 	// We accept a --server flag for future use, even though step 1 ignores it.
 	server := flag.String("server", "system", "DNS server to query")
 	flag.Parse()
@@ -28,9 +31,13 @@ func main() {
 
 	name := flag.Arg(0)
 
-	r := resolver.New(*server)
+	r := resolver.New(*server, *diagram)
 
+	// We're going to be looking up an A record here.
+	// IPv6 might be implemented later, but I don't know how long palliative care will continue
+	// for that dying beast. (Although it keeps SecOps in business)
 	ips, err := r.LookupA(name)
+
 	if err != nil {
 		log.Fatalf("lookup error: %v", err)
 	}

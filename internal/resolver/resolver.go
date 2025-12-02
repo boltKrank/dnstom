@@ -8,10 +8,11 @@ import (
 )
 
 type Resolver struct {
-	server string // e.g. "1.1.1.1:53"
+	server  string // e.g. "1.1.1.1:53"
+	diagram bool
 }
 
-func New(server string) *Resolver {
+func New(server string, diagram bool) *Resolver {
 	return &Resolver{server: server}
 }
 
@@ -26,6 +27,7 @@ func New(server string) *Resolver {
 // IPv4 addresses (A records) for the given name.
 // Right now, EncodeQuery is called; UDP send/receive and response parsing
 // are left as detailed TODOs for you.
+
 func (r *Resolver) LookupA(name string) ([]net.IP, error) {
 	// Step 1: Build a raw DNS query packet (header + question).
 	query, err := dnswire.EncodeQuery(name, dnswire.TypeA)
