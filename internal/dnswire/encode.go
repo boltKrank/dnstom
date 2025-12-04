@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
+	"strings"
 )
 
 // Header, Question, ResourceRecord, Message, PrettyPrint stay as you already have them.
@@ -49,6 +50,70 @@ func EncodeHeader(h Header) ([]byte, error) {
 	return buf[:], nil
 }
 
+func EncodeQuestion(q Question) ([]byte, error) {
+
+	// TODO: Encode QNAME (the domain name in question)
+	// Steps:
+	//   1. Split the domain name into labels, e.g. "www.example.com" →
+	//        []string{"www", "example", "com"}.
+	//   2. For each label:
+	//        - Check that len(label) <= 63 (DNS label length limit).
+	//        - Write 1 byte: the length of the label.
+	//        - Write N bytes: the ASCII bytes of the label.
+	//   3. After all labels, write a zero length byte: 0x00 (root label terminator).
+	// Notes:
+	//   - Do NOT write the dots ('.') themselves, only length-prefixed labels.
+	//   - QNAME always ends with 0x00, even for single-label names.
+	//   - See RFC 1035 §3.1 “Name space definitions” for name encoding.
+	//
+	// Example encoding:
+	//   "www.example.com" →
+	//      03 'w' 'w' 'w' 07 'e' 'x' 'a' 'm' 'p' 'l' 'e' 03 'c' 'o' 'm' 00
+
+	/* func main() {
+		qname := "www.google.com"
+
+		labels := strings.Split(qname, ".")
+
+		byte_size := 0
+
+		for index, value := range labels {
+
+			byte_size = byte_size + len(labels[index])
+			fmt.Printf("Index: %d, Value: %s, Length: %d\n", index, value, len(labels[index]))
+		}
+
+		fmt.Printf("QNAME Length: %d", byte_size)
+
+	} */
+
+	labels := strings.Split(q.Name, ".")
+
+	var qname []byte
+
+	for _, label := range labels {
+
+		qname = append(qname, byte(len(label))) //The byte length of the label coming up
+
+		qname = append(qname, []byte(label)...) // The label itself.
+
+	}
+
+	//Finish off the QNAME with 0x00:
+	qname = append(qname, 0x00)
+
+	//Now we have the question, we just add the QTYPE and QCLASS
+	question := qname
+
+	//TODO: QTYPE
+	question = append(question, byte(q.Type))
+
+	//TODO: QCLASS
+	question = append(question, byte(q.Class))
+
+	return question, nil
+}
+
 // EncodeQuery builds a DNS query message (header + question section).
 // For this step, only the header encoding is implemented; the rest is
 // left as TODOs with detailed guidance for you to fill in.
@@ -82,23 +147,27 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 		return nil, fmt.Errorf("write header: %w", err)
 	}
 
-	// TODO: Encode QNAME (the domain name in question)
-	// Steps:
-	//   1. Split the domain name into labels, e.g. "www.example.com" →
-	//        []string{"www", "example", "com"}.
-	//   2. For each label:
-	//        - Check that len(label) <= 63 (DNS label length limit).
-	//        - Write 1 byte: the length of the label.
-	//        - Write N bytes: the ASCII bytes of the label.
-	//   3. After all labels, write a zero length byte: 0x00 (root label terminator).
-	// Notes:
-	//   - Do NOT write the dots ('.') themselves, only length-prefixed labels.
-	//   - QNAME always ends with 0x00, even for single-label names.
-	//   - See RFC 1035 §3.1 “Name space definitions” for name encoding.
-	//
-	// Example encoding:
-	//   "www.example.com" →
-	//      03 'w' 'w' 'w' 07 'e' 'x' 'a' 'm' 'p' 'l' 'e' 03 'c' 'o' 'm' 00
+	// type Question struct {
+	// Name  string
+	// Type  uint16
+	// Class uint16
+
+	var q Question
+
+	// Initial data
+	q.Name = "wwww.example.com"
+	q.Type = TypeA
+	q.Class = ClassIN
+
+	questionBytes, err := EncodeQuestion(q)
+	if err != nil {
+		return nil, fmt.Errorf("encode question: %w", err)
+	}
+
+	// Write the question section
+	if _, err := buf.Write(questionBytes); err != nil {
+		return nil, fmt.Errorf("write question: %w", err)
+	}
 
 	// TODO: Write QTYPE and QCLASS immediately after QNAME
 	// Steps:

@@ -1,109 +1,253 @@
-package dnswire
+// diagram.go
+package dnswire // change to your package name
 
 import (
-	"encoding/binary"
+	"encoding/hex"
 	"fmt"
-	"io"
+	"strings"
 )
 
-// PrintHeaderDiagram prints an RFC-style DNS header layout and the
-// concrete values for the given Header.
-func PrintHeaderDiagram(h Header, w io.Writer) error {
-	// Encode the header so we can show raw values too.
-	raw, err := EncodeHeader(h)
-	if err != nil {
-		return fmt.Errorf("encode header for diagram: %w", err)
+// =============[ ANSI COLOR SETUP ]=============
+
+// Toggle this if you want to disable colours globally.
+var UseColor = true
+
+const (
+	cReset  = "\033[0m"
+	cDim    = "\033[2m"
+	cBold   = "\033[1m"
+	cCyan   = "\033[36m"
+	cWhite  = "\033[97m"
+	cYellow = "\033[93m"
+	cGreen  = "\033[92m"
+)
+
+func col(s, color string) string {
+	if !UseColor {
+		return s
+	}
+	return color + s + cReset
+}
+
+// =============[ TYPES ]=============
+
+type DNSHeader struct {
+	ID      uint16
+	Flags   uint16
+	QDCount uint16
+	ANCount uint16
+	NSCount uint16
+	ARCount uint16
+}
+
+type DNSQuestion struct {
+	Name   string // e.g. "www.example.com."
+	QType  uint16
+	QClass uint16
+}
+
+type DNSResourceRecord struct {
+	Name     string
+	Type     uint16
+	Class    uint16
+	TTL      uint32
+	RDLength uint16
+	RData    []byte
+}
+
+type DNSMessage struct {
+	Header      DNSHeader
+	Questions   []DNSQuestion
+	Answers     []DNSResourceRecord
+	Authorities []DNSResourceRecord
+	Additionals []DNSResourceRecord
+}
+
+// Public entry point
+func PrintDNSMessageDiagram(msg *DNSMessage) {
+	printHeaderDiagram(&msg.Header)
+
+	if len(msg.Questions) > 0 {
+		fmt.Println()
+		fmt.Println(col(";; QUESTION SECTION:", cCyan+cBold))
+		for i, q := range msg.Questions {
+			printQuestionDiagram(i, &q)
+		}
 	}
 
-	if len(raw) != 12 {
-		return fmt.Errorf("expected 12-byte DNS header, got %d bytes", len(raw))
+	if len(msg.Answers) > 0 {
+		fmt.Println()
+		fmt.Println(col(";; ANSWER SECTION:", cCyan+cBold))
+		for i, rr := range msg.Answers {
+			printRRDiagram(i, &rr)
+		}
 	}
 
-	id := binary.BigEndian.Uint16(raw[0:2])
-	flags := binary.BigEndian.Uint16(raw[2:4])
-	qd := binary.BigEndian.Uint16(raw[4:6])
-	an := binary.BigEndian.Uint16(raw[6:8])
-	ns := binary.BigEndian.Uint16(raw[8:10])
-	ar := binary.BigEndian.Uint16(raw[10:12])
+	if len(msg.Authorities) > 0 {
+		fmt.Println()
+		fmt.Println(col(";; AUTHORITY SECTION:", cCyan+cBold))
+		for i, rr := range msg.Authorities {
+			printRRDiagram(i, &rr)
+		}
+	}
 
-	// Decode flags field for pretty printing.
-	qr := (flags>>15)&0x1 == 1
+	if len(msg.Additionals) > 0 {
+		fmt.Println()
+		fmt.Println(col(";; ADDITIONAL SECTION:", cCyan+cBold))
+		for i, rr := range msg.Additionals {
+			printRRDiagram(i, &rr)
+		}
+	}
+}
+
+// =============[ HEADER ]=============
+
+func printHeaderDiagram(h *DNSHeader) {
+	flags := h.Flags
+
+	qr := (flags >> 15) & 0x1
 	opcode := (flags >> 11) & 0xF
-	aa := (flags>>10)&0x1 == 1
-	tc := (flags>>9)&0x1 == 1
-	rd := (flags>>8)&0x1 == 1
-	ra := (flags>>7)&0x1 == 1
-	z := (flags >> 4) & 0x7
+	aa := (flags >> 10) & 0x1
+	tc := (flags >> 9) & 0x1
+	rd := (flags >> 8) & 0x1
+	ra := (flags >> 7) & 0x1
+	z := (flags >> 6) & 0x1
+	ad := (flags >> 5) & 0x1
+	cd := (flags >> 4) & 0x1
 	rcode := flags & 0xF
 
-	// RFC-style bit layout.
-	if _, err := fmt.Fprintln(w, `
-                                    1  1  1  1  1  1
-      0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
-     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-     |                      ID                       |
-     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-     |QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |
-     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-     |                    QDCOUNT                    |
-     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-     |                    ANCOUNT                    |
-     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-     |                    NSCOUNT                    |
-     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-     |                    ARCOUNT                    |
-     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+`); err != nil {
-		return err
-	}
+	box := col("+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+", cDim)
+	fmt.Println(col(";; HEADER", cCyan+cBold))
+	fmt.Println(box)
+	fmt.Println(col("|                      ID                       |", cWhite))
+	fmt.Printf("%s\n", col(fmt.Sprintf("|                   0x%04x                     |", h.ID), cYellow))
+	fmt.Println(box)
+	fmt.Println(col("|QR|   Opcode  |AA|TC|RD|RA| Z|AD|CD|   RCODE   |", cWhite))
+	fmt.Printf("%s\n", col(
+		fmt.Sprintf("| %d|   %4d   | %d| %d| %d| %d| %d| %d| %d|   %4d   |",
+			qr, opcode, aa, tc, rd, ra, z, ad, cd, rcode),
+		cYellow,
+	))
+	fmt.Println(box)
 
-	// Concrete values.
-	if _, err := fmt.Fprintf(w, "ID:      0x%04X (%d)\n", id, id); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(w, "FLAGS:   0x%04X\n", flags); err != nil {
-		return err
-	}
+	fmt.Println(col("|                    QDCOUNT                    |", cWhite))
+	fmt.Printf("%s\n", col(fmt.Sprintf("|                   %10d                 |", h.QDCount), cYellow))
+	fmt.Println(box)
 
-	if _, err := fmt.Fprintf(w,
-		"  QR=%d  Opcode=%d  AA=%d  TC=%d  RD=%d  RA=%d  Z=%d  RCODE=%d\n",
-		boolToBit(qr), opcode, boolToBit(aa), boolToBit(tc),
-		boolToBit(rd), boolToBit(ra), z, rcode,
-	); err != nil {
-		return err
-	}
+	fmt.Println(col("|                    ANCOUNT                    |", cWhite))
+	fmt.Printf("%s\n", col(fmt.Sprintf("|                   %10d                 |", h.ANCount), cYellow))
+	fmt.Println(box)
 
-	if _, err := fmt.Fprintf(w, "QDCOUNT: %d\nANCOUNT: %d\nNSCOUNT: %d\nARCOUNT: %d\n",
-		qd, an, ns, ar); err != nil {
-		return err
-	}
+	fmt.Println(col("|                    NSCOUNT                    |", cWhite))
+	fmt.Printf("%s\n", col(fmt.Sprintf("|                   %10d                 |", h.NSCount), cYellow))
+	fmt.Println(box)
 
-	if _, err := fmt.Fprintln(w, "\nRaw header bytes (hex):"); err != nil {
-		return err
-	}
-	if err := PrintRawHeaderBytes(raw, w); err != nil {
-		return err
-	}
-
-	return nil
+	fmt.Println(col("|                    ARCOUNT                    |", cWhite))
+	fmt.Printf("%s\n", col(fmt.Sprintf("|                   %10d                 |", h.ARCount), cYellow))
+	fmt.Println(box)
 }
 
-func boolToBit(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
+// =============[ QUESTION SECTION ]=============
+
+func printQuestionDiagram(index int, q *DNSQuestion) {
+	box := col("+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+", cDim)
+
+	fmt.Println(box)
+	fmt.Println(col(fmt.Sprintf(";; Question %d", index+1), cCyan+cBold))
+	fmt.Println(col("|                     QNAME                     |", cWhite))
+	fmt.Printf("%s\n", col("| "+padRight(q.Name, 45), cYellow))
+	fmt.Println(box)
+	fmt.Println(col("|                    QTYPE                      |", cWhite))
+	fmt.Printf("%s\n", col(fmt.Sprintf("| %-5d (%s)", q.QType, typeToString(q.QType)), cYellow))
+	fmt.Println(box)
+	fmt.Println(col("|                    QCLASS                     |", cWhite))
+	fmt.Printf("%s\n", col(fmt.Sprintf("| %-5d (%s)", q.QClass, classToString(q.QClass)), cYellow))
+	fmt.Println(box)
 }
 
-// PrintRawHeaderBytes prints the 12-byte header in a friendly hex format.
-func PrintRawHeaderBytes(raw []byte, w io.Writer) error {
-	if len(raw) != 12 {
-		return fmt.Errorf("expected 12-byte DNS header, got %d bytes", len(raw))
-	}
+// =============[ RESOURCE RECORDS ]=============
 
-	_, err := fmt.Fprintf(w,
-		"  %02X %02X  %02X %02X  %02X %02X  %02X %02X  %02X %02X  %02X %02X\n",
-		raw[0], raw[1], raw[2], raw[3], raw[4], raw[5],
-		raw[6], raw[7], raw[8], raw[9], raw[10], raw[11],
-	)
-	return err
+func printRRDiagram(index int, rr *DNSResourceRecord) {
+	box := col("+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+", cDim)
+
+	fmt.Println(box)
+	fmt.Println(col(fmt.Sprintf(";; RR %d", index+1), cCyan+cBold))
+	fmt.Println(col("|                     NAME                      |", cWhite))
+	fmt.Printf("%s\n", col("| "+padRight(rr.Name, 45), cYellow))
+	fmt.Println(box)
+	fmt.Println(col("|      TYPE       |      CLASS      |    TTL    |", cWhite))
+	fmt.Printf("%s\n", col(
+		fmt.Sprintf("| %-5d (%-6s)| %-5d (%-6s)| %9d |",
+			rr.Type, typeToString(rr.Type),
+			rr.Class, classToString(rr.Class),
+			rr.TTL),
+		cYellow,
+	))
+	fmt.Println(box)
+	fmt.Println(col("|                  RDLENGTH                     |", cWhite))
+	fmt.Printf("%s\n", col(fmt.Sprintf("| %10d", rr.RDLength), cYellow))
+	fmt.Println(box)
+	fmt.Println(col("|                     RDATA                     |", cWhite))
+
+	hexData := strings.ToUpper(hex.EncodeToString(rr.RData))
+	if len(hexData) == 0 {
+		fmt.Println(col("| (empty)", cDim))
+	} else {
+		for len(hexData) > 0 {
+			chunk := hexData
+			if len(chunk) > 32 {
+				chunk = chunk[:32]
+				hexData = hexData[32:]
+			} else {
+				hexData = ""
+			}
+			fmt.Printf("%s\n", col("| "+chunk, cGreen))
+		}
+	}
+	fmt.Println(box)
+}
+
+// =============[ HELPERS ]=============
+
+func padRight(s string, width int) string {
+	if len(s) >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-len(s))
+}
+
+func typeToString(t uint16) string {
+	switch t {
+	case 1:
+		return "A"
+	case 2:
+		return "NS"
+	case 5:
+		return "CNAME"
+	case 6:
+		return "SOA"
+	case 12:
+		return "PTR"
+	case 15:
+		return "MX"
+	case 16:
+		return "TXT"
+	case 28:
+		return "AAAA"
+	default:
+		return "TYPE" + fmt.Sprint(t)
+	}
+}
+
+func classToString(c uint16) string {
+	switch c {
+	case 1:
+		return "IN"
+	case 3:
+		return "CH"
+	case 4:
+		return "HS"
+	default:
+		return "CLASS" + fmt.Sprint(c)
+	}
 }
