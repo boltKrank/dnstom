@@ -3,6 +3,7 @@ package resolver
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"dnstom/internal/dnswire"
 )
@@ -34,6 +35,37 @@ func (r *Resolver) LookupA(name string) ([]net.IP, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build DNS query: %w", err)
 	}
+
+	// Send query to name server
+
+	nameserver := "8.8.8.8:53" // Replace with variable for parameter injection
+
+	connection, err := net.Dial("udp", nameserver)
+	if err != nil {
+		panic(err)
+	}
+
+	defer connection.Close()
+
+	// Timeout in case we don't get a response (prevent hanging)
+	connection.SetDeadline((time.Now().Add(2 * time.Second)))
+
+	// Send query packet
+	_, err = connection.Write(query)
+	if err != nil {
+		panic(err)
+	}
+
+	// Buffer for the response - 512 is the max for DNS over UDP
+	response := make([]byte, 512)
+
+	n, err := connection.Read(response)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Bytes received: %d", n)
+	fmt.Printf("%x\n", response[:n])
 
 	// TODO: Step 2 — Send the query via UDP to r.server and receive a response
 	//
@@ -69,7 +101,7 @@ func (r *Resolver) LookupA(name string) ([]net.IP, error) {
 	//   - For now, you can ignore retransmits, truncation (TC flag), and
 	//     other robustness concerns; those can come later.
 
-	_ = query // remove this once you actually send it
+	// _ = query // remove this once you actually send it
 
 	// TODO: Step 3 — Decode the response bytes into a dnswire.Message
 	//

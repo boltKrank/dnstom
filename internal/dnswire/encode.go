@@ -105,18 +105,16 @@ func EncodeQuestion(q Question) ([]byte, error) {
 	//Now we have the question, we just add the QTYPE and QCLASS
 	question := qname
 
-	//TODO: QTYPE
+	// QTYPE
 	question = append(question, byte(q.Type))
 
-	//TODO: QCLASS
+	// QCLASS
 	question = append(question, byte(q.Class))
 
 	return question, nil
 }
 
-// EncodeQuery builds a DNS query message (header + question section).
-// For this step, only the header encoding is implemented; the rest is
-// left as TODOs with detailed guidance for you to fill in.
+// Header and question sections built here
 func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 	var h Header
 
@@ -147,17 +145,7 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 		return nil, fmt.Errorf("write header: %w", err)
 	}
 
-	// type Question struct {
-	// Name  string
-	// Type  uint16
-	// Class uint16
-
 	var q Question
-
-	// Initial data
-	q.Name = "wwww.example.com"
-	q.Type = TypeA
-	q.Class = ClassIN
 
 	questionBytes, err := EncodeQuestion(q)
 	if err != nil {
@@ -168,25 +156,6 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 	if _, err := buf.Write(questionBytes); err != nil {
 		return nil, fmt.Errorf("write question: %w", err)
 	}
-
-	// TODO: Write QTYPE and QCLASS immediately after QNAME
-	// Steps:
-	//   1. QTYPE is a 16-bit unsigned integer in network byte order.
-	//      - For A records, use TypeA (1).
-	//   2. QCLASS is a 16-bit unsigned integer in network byte order.
-	//      - For Internet, use ClassIN (1).
-	//   3. Use binary.BigEndian.PutUint16 into a temporary [2]byte and write it
-	//      into the buffer for both QTYPE and QCLASS.
-	//
-	// Resulting QUESTION layout:
-	//   QNAME (variable length)
-	//   QTYPE (2 bytes)
-	//   QCLASS (2 bytes)
-	//
-	// Once done, buf.Bytes() will represent a complete DNS query message.
-
-	_ = name  // to avoid unused warnings until you implement QNAME
-	_ = qtype // to avoid unused warnings until you write QTYPE
 
 	return buf.Bytes(), nil
 }
