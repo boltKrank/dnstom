@@ -13,7 +13,7 @@ niosmodel – translate Infoblox objects to generic DNS views/RRs
 
 ## Try to make the entry point as dumb as possible
 
-```
+```go
 func main() {
     cfg := loadConfig()
     if err := app.Run(cfg); err != nil {
@@ -24,7 +24,7 @@ func main() {
 
 ## Initial layout plan
 
-```
+```tree
 dnstom/
   go.mod
 
@@ -45,7 +45,7 @@ dnstom/
 
 ```
 
-
 ### Appendix/Refernce
 
 [https://www.isc.org/bind/]
+[https://docs.infoblox.com/space/nios90/1380844355/DNS+Response+Message+Format+and+Examples]

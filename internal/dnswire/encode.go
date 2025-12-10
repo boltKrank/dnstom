@@ -52,40 +52,7 @@ func EncodeHeader(h Header) ([]byte, error) {
 
 func EncodeQuestion(q Question) ([]byte, error) {
 
-	// TODO: Encode QNAME (the domain name in question)
-	// Steps:
-	//   1. Split the domain name into labels, e.g. "www.example.com" →
-	//        []string{"www", "example", "com"}.
-	//   2. For each label:
-	//        - Check that len(label) <= 63 (DNS label length limit).
-	//        - Write 1 byte: the length of the label.
-	//        - Write N bytes: the ASCII bytes of the label.
-	//   3. After all labels, write a zero length byte: 0x00 (root label terminator).
-	// Notes:
-	//   - Do NOT write the dots ('.') themselves, only length-prefixed labels.
-	//   - QNAME always ends with 0x00, even for single-label names.
-	//   - See RFC 1035 §3.1 “Name space definitions” for name encoding.
-	//
-	// Example encoding:
-	//   "www.example.com" →
-	//      03 'w' 'w' 'w' 07 'e' 'x' 'a' 'm' 'p' 'l' 'e' 03 'c' 'o' 'm' 00
-
-	/* func main() {
-		qname := "www.google.com"
-
-		labels := strings.Split(qname, ".")
-
-		byte_size := 0
-
-		for index, value := range labels {
-
-			byte_size = byte_size + len(labels[index])
-			fmt.Printf("Index: %d, Value: %s, Length: %d\n", index, value, len(labels[index]))
-		}
-
-		fmt.Printf("QNAME Length: %d", byte_size)
-
-	} */
+	// NAME
 
 	labels := strings.Split(q.Name, ".")
 
@@ -116,6 +83,15 @@ func EncodeQuestion(q Question) ([]byte, error) {
 
 // Header and question sections built here
 func EncodeQuery(name string, qtype uint16) ([]byte, error) {
+
+	/* 	type Message struct {
+		Header     Header
+		Questions  []Question
+		Answers    []ResourceRecord //Ignored in query (for now no EDNS)
+		Authority  []ResourceRecord //Ignored in query (for now no EDNS)
+		Additional []ResourceRecord //Ignored in query (for now no EDNS)
+	}	 */
+
 	var h Header
 
 	// ID: random 16-bit value (used to match response with query).
@@ -146,6 +122,18 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 	}
 
 	var q Question
+
+	/* We need to set name, type and class
+
+	type Question struct {
+		Name  string
+		Type  uint16
+		Class uint16
+	} */
+
+	q.Name = name
+	q.Type = TypeA
+	q.Class = ClassIN
 
 	questionBytes, err := EncodeQuestion(q)
 	if err != nil {
