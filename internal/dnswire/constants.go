@@ -7,8 +7,8 @@ package dnswire
 
 const (
 	// DNS record types
-	TypeA uint16 = 1
+	TypeA uint16 = 1 ///0x0001
 
 	// DNS class
-	ClassIN uint16 = 1
+	ClassIN uint16 = 1 ///0x0001
 )

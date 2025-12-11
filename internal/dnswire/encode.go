@@ -11,6 +11,19 @@ import (
 // Header, Question, ResourceRecord, Message, PrettyPrint stay as you already have them.
 
 // EncodeHeader encodes the DNS header into a 12-byte buffer.
+
+// DON'T FORGET !!! - Big-endian for networking :D
+// Helper functions to ensure this:
+func appendUint16(b []byte, v uint16) []byte {
+	return append(b, byte(v>>8), byte(v))
+}
+
+/* func appendUint32(b []byte, v uint32) []byte {
+	return append(b,
+		byte(v>>24), byte(v>>16), byte(v>>8), byte(v),
+	)
+} */
+
 func EncodeHeader(h Header) ([]byte, error) {
 	// DNS header is always 12 bytes.
 	var buf [12]byte
@@ -52,7 +65,7 @@ func EncodeHeader(h Header) ([]byte, error) {
 
 func EncodeQuestion(q Question) ([]byte, error) {
 
-	// NAME
+	// NAME - test : got := encodeName(name)
 
 	labels := strings.Split(q.Name, ".")
 
@@ -73,10 +86,10 @@ func EncodeQuestion(q Question) ([]byte, error) {
 	question := qname
 
 	// QTYPE
-	question = append(question, byte(q.Type))
+	question = appendUint16(question, TypeA)
 
 	// QCLASS
-	question = append(question, byte(q.Class))
+	question = appendUint16(question, ClassIN)
 
 	return question, nil
 }
@@ -132,7 +145,7 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 	} */
 
 	q.Name = name
-	q.Type = TypeA
+	q.Type = qtype
 	q.Class = ClassIN
 
 	questionBytes, err := EncodeQuestion(q)
