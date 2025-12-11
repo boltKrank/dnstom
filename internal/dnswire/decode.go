@@ -28,4 +28,14 @@ func decodeHeader(msg []byte) Header {
 	return hdr
 }
 
+
+// TODO: functionize this function
+func decodeQuestion()
+
+	q, off2, err := decodeQuestion(packet []byte, off)
+	if err != nil {
+		t.Fatalf("decodeQuestion error: %v", err)
+	}
+
+
 // Data received from www.example.com: Bytes received: 12   -    6caa81010000000000000000

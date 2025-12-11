@@ -24,7 +24,7 @@ func appendUint16(b []byte, v uint16) []byte {
 	)
 } */
 
-func EncodeHeader(h Header) ([]byte, error) {
+func encodeHeader(h Header) ([]byte, error) {
 	// DNS header is always 12 bytes.
 	var buf [12]byte
 
@@ -63,9 +63,16 @@ func EncodeHeader(h Header) ([]byte, error) {
 	return buf[:], nil
 }
 
-func EncodeQuestion(q Question) ([]byte, error) {
+// NAME - test : got := encodeName(name)
 
-	// NAME - test : got := encodeName(name)
+func encodeName(name string) ([]byte, error) {
+
+	encodedName := []byte(name)
+
+	return encodedName, nil
+}
+
+func EncodeQuestion(q Question) ([]byte, error) {
 
 	labels := strings.Split(q.Name, ".")
 
@@ -122,7 +129,7 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 	// One question in this message.
 	h.QDCount = 1
 
-	headerBytes, err := EncodeHeader(h)
+	headerBytes, err := encodeHeader(h)
 	if err != nil {
 		return nil, fmt.Errorf("encode header: %w", err)
 	}
