@@ -53,7 +53,11 @@ func mustHexDecode(t *testing.T, s string) []byte {
 func TestEncodeName_WWWYahooCom(t *testing.T) {
 	name := "www.yahoo.com"
 
-	got := encodeName(name)
+	got, err := encodeName(name)
+
+	if err != nil {
+		t.Fatalf("encodeName returned an error: %v", err)
+	}
 
 	// 03 'w' 'w' 'w' 05 'y' ... 'o' 'o' 03 'c' 'o' 'm' 00
 	want := []byte{
@@ -109,7 +113,11 @@ func TestEncodeHeader_BasicQuery(t *testing.T) {
 		ARCount: 0,
 	}
 
-	got := encodeHeader(h)
+	got, err := encodeHeader(h)
+
+	if err != nil {
+		t.Fatalf("encodeHeader returned an error: %v", err)
+	}
 
 	// Expected header bytes:
 	// ID      = 0x7466
