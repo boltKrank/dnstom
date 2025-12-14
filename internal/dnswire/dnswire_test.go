@@ -136,7 +136,8 @@ func TestEncodeHeader_BasicQuery(t *testing.T) {
 func TestDecodeHeader_BasicQuery(t *testing.T) {
 	packet := mustHexDecode(t, "7466"+"0100"+"0001"+"0000"+"0000"+"0000")
 
-	h, off, err := decodeHeader(packet)
+	// 0 offset because it's the header
+	h, off, err := decodeHeader(packet, 0)
 	if err != nil {
 		t.Fatalf("decodeHeader error: %v", err)
 	}
