@@ -137,14 +137,7 @@ func TestDecodeHeader_BasicQuery(t *testing.T) {
 	packet := mustHexDecode(t, "7466"+"0100"+"0001"+"0000"+"0000"+"0000")
 
 	// 0 offset because it's the header
-	h, off, err := decodeHeader(packet, 0)
-	if err != nil {
-		t.Fatalf("decodeHeader error: %v", err)
-	}
-
-	if off != len(packet) {
-		t.Fatalf("decodeHeader offset = %d, want %d", off, len(packet))
-	}
+	h := decodeHeader(packet)
 
 	if h.ID != 0x7466 {
 		t.Errorf("ID = 0x%04x, want 0x7466", h.ID)
@@ -195,8 +188,24 @@ func TestEncodeFullQuery_WWWYahooCom_A_IN(t *testing.T) {
 	}
 
 	var packet []byte
-	packet = append(packet, encodeHeader(h)...)
-	packet = append(packet, encodeQuestion(q)...)
+
+	// Get just the bytes of a header
+	hdrBytes, err := encodeHeader(h)
+	if err != nil {
+		t.Fatalf("encodeHeader failed: %v", err)
+	}
+
+	packet = append(packet, hdrBytes...)
+
+	// Just the bytes of the question
+	questBytes, err := encodeQuestion(q)
+	if err != nil {
+		t.Fatalf("EncodeQuestion failed: %v", err)
+	}
+
+	packet = append(packet, hdrBytes...)
+
+	packet = append(packet, questBytes...)
 
 	// Expected full query packet:
 	// 74 66 01 00 00 01 00 00 00 00 00 00
@@ -221,10 +230,7 @@ func TestDecodeFullQuery_WWWYahooCom_A_IN(t *testing.T) {
 			"0001"+"0001",
 	)
 
-	h, off, err := decodeHeader(packet)
-	if err != nil {
-		t.Fatalf("decodeHeader error: %v", err)
-	}
+	h := decodeHeader(packet)
 
 	if h.ID != 0x7466 {
 		t.Errorf("ID = 0x%04x, want 0x7466", h.ID)
@@ -236,10 +242,7 @@ func TestDecodeFullQuery_WWWYahooCom_A_IN(t *testing.T) {
 		t.Fatalf("QDCount = %d, want 1", h.QDCount)
 	}
 
-	q, off2, err := decodeQuestion(packet, off)
-	if err != nil {
-		t.Fatalf("decodeQuestion error: %v", err)
-	}
+	q := decodeQuestion(packet)
 
 	if q.Name != "www.yahoo.com" {
 		t.Errorf("Question.Name = %q, want %q", q.Name, "www.yahoo.com")
@@ -251,7 +254,4 @@ func TestDecodeFullQuery_WWWYahooCom_A_IN(t *testing.T) {
 		t.Errorf("Question.Class = %d, want %d", q.Class, ClassIN)
 	}
 
-	if off2 != len(packet) {
-		t.Errorf("final offset = %d, want %d", off2, len(packet))
-	}
 }

@@ -67,12 +67,25 @@ func encodeHeader(h Header) ([]byte, error) {
 
 func encodeName(name string) ([]byte, error) {
 
-	encodedName := []byte(name)
+	labels := strings.Split(name, ".")
+
+	var encodedName []byte
+
+	for _, label := range labels {
+
+		encodedName = append(encodedName, byte(len(label))) //The byte length of the label coming up
+
+		encodedName = append(encodedName, []byte(label)...) // The label itself.
+
+	}
+
+	//Finish off the QNAME with 0x00:
+	encodedName = append(encodedName, 0x00)
 
 	return encodedName, nil
 }
 
-func EncodeQuestion(q Question) ([]byte, error) {
+func encodeQuestion(q Question) ([]byte, error) {
 
 	labels := strings.Split(q.Name, ".")
 
@@ -155,7 +168,7 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 	q.Type = qtype
 	q.Class = ClassIN
 
-	questionBytes, err := EncodeQuestion(q)
+	questionBytes, err := encodeQuestion(q)
 	if err != nil {
 		return nil, fmt.Errorf("encode question: %w", err)
 	}

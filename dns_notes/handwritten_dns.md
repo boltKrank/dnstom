@@ -1,0 +1,1 @@
+https://routley.io/posts/hand-writing-dns-messages
