@@ -3,6 +3,7 @@ package dnswire
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
 )
 
 func decodeHeader(msg []byte) (header Header) {
@@ -40,25 +41,8 @@ func decodeQuestion(questionBytes []byte) (question Question) {
 	"03777777"+"057961686f6f"+"03636f6d"+"00"+ // QNAME
 	"0001"+"0001", */ //QTYPE + QCLASS
 
-	// binary.BigEndian.Uint16(msg[10:12]),
-	fmt.Println("binary.BigEndian.Uint16(msg[10:12])")
-	fmt.Printf("questionBytes[13]: %02X\n", questionBytes[13])
-	fmt.Printf("questionBytes[14]: %02X\n", questionBytes[14])
-	fmt.Printf("questionBytes[15]: %02X\n", questionBytes[15])
-	fmt.Printf("questionBytes[16]: %02X\n", questionBytes[16])
-	fmt.Printf("questionBytes[17]: %02X\n", questionBytes[17])
-	fmt.Printf("questionBytes[18]: %02X\n", questionBytes[18])
-	fmt.Printf("questionBytes[19]: %02X\n", questionBytes[19])
-
-	fmt.Printf("questionBytes[20]: %02X\n", questionBytes[20])
-	fmt.Printf("questionBytes[21]: %02X\n", questionBytes[21])
-
-	fmt.Printf("questionBytes[22]: %02X\n", questionBytes[22])
-
-	fmt.Printf("questionBytes[23]: %02X\n", questionBytes[23])
-
 	q := Question{
-		Name:  "name",
+		Name:  decodeName(questionBytes),
 		Type:  TypeA,   //need to overwrite this with actual value
 		Class: ClassIN, //need to overwrite this with actual value
 	}
@@ -66,9 +50,29 @@ func decodeQuestion(questionBytes []byte) (question Question) {
 }
 
 // TODO: Fille out this function
-func decodeName(encodedName []byte, offset int) (string, int, error) {
+func decodeName(encodedName []byte) string {
 
-	return "not yet", 69, nil
+	printByteArrayAsHex(encodedName)
+
+	printByteArrayAsASCII(encodedName)
+
+	// Decoding
+	// 03 77 77 77 05 79 61 68 6f 6f 03 63 6f 6d 00
+	// Check hex read those bytes and next hex is length again (unless 0x00)
+
+	var labels []string
+	for i := 0; i < len(encodedName) && encodedName[i] != 0; {
+		l := int(encodedName[i])
+		i++
+		labels = append(labels, string(encodedName[i:i+l]))
+		i += l
+	}
+
+	decodedName := strings.Join(labels, ".")
+
+	fmt.Println(decodedName)
+
+	return decodedName
 
 }
 

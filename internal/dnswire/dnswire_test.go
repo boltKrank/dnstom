@@ -80,17 +80,10 @@ func TestDecodeName_WWWYahooCom(t *testing.T) {
 		0x00,
 	}
 
-	name, off, err := decodeName(encoded, 0)
-	if err != nil {
-		t.Fatalf("decodeName returned error: %v", err)
-	}
+	name := decodeName(encoded)
 
 	if name != "www.yahoo.com" {
 		t.Fatalf("decodeName name = %q, want %q", name, "www.yahoo.com")
-	}
-
-	if off != len(encoded) {
-		t.Fatalf("decodeName offset = %d, want %d", off, len(encoded))
 	}
 }
 
@@ -203,8 +196,6 @@ func TestEncodeFullQuery_WWWYahooCom_A_IN(t *testing.T) {
 		t.Fatalf("EncodeQuestion failed: %v", err)
 	}
 
-	packet = append(packet, hdrBytes...)
-
 	packet = append(packet, questBytes...)
 
 	// Expected full query packet:
@@ -216,6 +207,9 @@ func TestEncodeFullQuery_WWWYahooCom_A_IN(t *testing.T) {
 			"03777777"+"057961686f6f"+"03636f6d"+"00"+
 			"0001"+"0001",
 	)
+
+	// full query packet = 74660100000100000000000074660100000100000000000003777777057961686f6f03636f6d0000010001,
+	// want                746601000001000000000000                        03777777057961686f6f03636f6d0000010001
 
 	if !bytes.Equal(packet, want) {
 		t.Fatalf("full query packet = %x, want %x", packet, want)
