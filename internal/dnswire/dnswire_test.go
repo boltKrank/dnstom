@@ -3,6 +3,7 @@ package dnswire
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"testing"
 )
 
@@ -79,11 +80,11 @@ func TestDecodeName_WWWYahooCom(t *testing.T) {
 		0x03, 'c', 'o', 'm',
 		0x00,
 	}
-
-	name := decodeName(encoded)
+	// pffset 0 because there's no header
+	name, offset := decodeName(encoded, 0)
 
 	if name != "www.yahoo.com" {
-		t.Fatalf("decodeName name = %q, want %q", name, "www.yahoo.com")
+		t.Fatalf("decodeName name = %q, want %q, offset = %d", name, "www.yahoo.com", offset)
 	}
 }
 
@@ -236,7 +237,9 @@ func TestDecodeFullQuery_WWWYahooCom_A_IN(t *testing.T) {
 		t.Fatalf("QDCount = %d, want 1", h.QDCount)
 	}
 
-	q := decodeQuestion(packet)
+	fmt.Printf(" \n Test -packet length = %d \n", len(packet))
+
+	q, offset := decodeQuestion(packet)
 
 	if q.Name != "www.yahoo.com" {
 		t.Errorf("Question.Name = %q, want %q", q.Name, "www.yahoo.com")
@@ -246,6 +249,11 @@ func TestDecodeFullQuery_WWWYahooCom_A_IN(t *testing.T) {
 	}
 	if q.Class != ClassIN {
 		t.Errorf("Question.Class = %d, want %d", q.Class, ClassIN)
+	}
+
+	// Offset should be 12 +
+	if offset != (12 + len(q.Name) + 1 + 2 + 2) {
+		t.Errorf("Offset = %d, want %d", offset, (len(q.Name) + 4))
 	}
 
 }

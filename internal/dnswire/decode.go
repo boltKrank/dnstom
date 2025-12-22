@@ -34,23 +34,34 @@ func decodeHeader(msg []byte) (header Header) {
 }
 
 // TODO: functionize this function
-func decodeQuestion(questionBytes []byte) (question Question) {
+func decodeQuestion(questionBytes []byte) (Question, int) {
 
 	// Block to decode
 	/* 		"7466"+"0100"+"0001"+"0000"+"0000"+"0000"+  // HEADER
 	"03777777"+"057961686f6f"+"03636f6d"+"00"+ // QNAME
 	"0001"+"0001", */ //QTYPE + QCLASS
 
+	//Take off header
+	offset := 12
+
+	questionName, offset := decodeName(questionBytes, offset)
+
+	fmt.Printf("\n Current offset after decodeName() is: %d \n", offset)
+
 	q := Question{
-		Name:  decodeName(questionBytes),
+		Name:  questionName,
 		Type:  TypeA,   //need to overwrite this with actual value
 		Class: ClassIN, //need to overwrite this with actual value
 	}
-	return q
+
+	// Type (2 bytes) + Class (2 bytes)
+	offset += 4 // 4 bytes total
+
+	return q, offset
 }
 
 // TODO: Fille out this function
-func decodeName(encodedName []byte) string {
+func decodeName(encodedName []byte, offset int) (string, int) {
 
 	printByteArrayAsHex(encodedName)
 
@@ -59,20 +70,23 @@ func decodeName(encodedName []byte) string {
 	// Decoding
 	// 03 77 77 77 05 79 61 68 6f 6f 03 63 6f 6d 00
 	// Check hex read those bytes and next hex is length again (unless 0x00)
-
 	var labels []string
-	for i := 0; i < len(encodedName) && encodedName[i] != 0; {
+
+	fmt.Printf("\nTest - labels = %s", labels)
+
+	for i := offset; i < len(encodedName) && encodedName[i] != 0; {
 		l := int(encodedName[i])
 		i++
-		labels = append(labels, string(encodedName[i:i+l]))
+		labels = append(labels, string(encodedName[i:i+l])) // Error thrown here dnstom/internal/dnswire.decodeName({0x140000c2160, 0x1f, 0x1f}) dnstom/internal/dnswire/decode.go:73 +0x244
 		i += l
+		offset++
 	}
 
 	decodedName := strings.Join(labels, ".")
 
 	fmt.Println(decodedName)
 
-	return decodedName
+	return decodedName, offset
 
 }
 

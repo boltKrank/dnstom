@@ -93,7 +93,7 @@ func encodeQuestion(q Question) ([]byte, error) {
 
 	for _, label := range labels {
 
-		qname = append(qname, byte(len(label))) //The byte length of the label coming up
+		qname = append(qname, byte(len(label))) // The byte length of the label coming up
 
 		qname = append(qname, []byte(label)...) // The label itself.
 
@@ -111,7 +111,7 @@ func encodeQuestion(q Question) ([]byte, error) {
 	// QCLASS
 	question = appendUint16(question, ClassIN)
 
-	return question, nil
+	return question, nil //return offset
 }
 
 // Header and question sections built here
@@ -124,6 +124,9 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 		Authority  []ResourceRecord //Ignored in query (for now no EDNS)
 		Additional []ResourceRecord //Ignored in query (for now no EDNS)
 	}	 */
+
+	// So we can keep track of the variable QNAME length
+	offset := 0
 
 	var h Header
 
@@ -147,6 +150,8 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 		return nil, fmt.Errorf("encode header: %w", err)
 	}
 
+	offset += 12 //Size of header
+
 	var buf bytes.Buffer
 
 	// Write the 12-byte header first.
@@ -169,6 +174,7 @@ func EncodeQuery(name string, qtype uint16) ([]byte, error) {
 	q.Class = ClassIN
 
 	questionBytes, err := encodeQuestion(q)
+
 	if err != nil {
 		return nil, fmt.Errorf("encode question: %w", err)
 	}
