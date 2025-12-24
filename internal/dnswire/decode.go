@@ -90,6 +90,27 @@ func decodeName(encodedName []byte, offset int) (string, int) {
 
 }
 
+func DecodeMessage(encodedMessage []byte) (Message, error) {
+
+	// NOTE: Since the whole message is decoded here, we don't need to worry about the offset.
+	// The offset's relevance finishes at the end of the message.
+
+	/* 	The goal will be to return a struct that looks like this:
+	   	type Message struct {
+	   		Header     Header
+	   		Questions  []Question
+	   		Answers    []ResourceRecord
+	   		Authority  []ResourceRecord
+	   		Additional []ResourceRecord
+	   	} */
+
+	m := Message{
+		Header:    decodeHeader(encodedMessage),
+		Questions: decodeQuestion(encodedMessage),
+	}
+
+}
+
 /*
 	q, off2, err := decodeQuestion(packet []byte, off)
 	if err != nil {
