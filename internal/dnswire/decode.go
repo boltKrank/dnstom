@@ -105,10 +105,21 @@ func DecodeMessage(encodedMessage []byte) (Message, error) {
 	   	} */
 
 	m := Message{
-		Header:    decodeHeader(encodedMessage),
-		Questions: decodeQuestion(encodedMessage),
+		Header:     decodeHeader(encodedMessage),
+		Questions:  decodeQuestion(encodedMessage),
+		Authority:  decodeAuthority(encodedMessage),
+		Additional: decodeAdditional(encodedMessage),
 	}
 
+	return m
+}
+
+func decodeAdditional(encodedMessage []byte) ResourceRecord {
+	panic("unimplemented")
+}
+
+func decodeAuthority(encodedMessage []byte) ResourceRecord {
+	panic("unimplemented")
 }
 
 /*
